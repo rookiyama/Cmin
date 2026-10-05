@@ -47,7 +47,6 @@ enum TokenType {
 
     TOK_LPAREN = 25, // (
     TOK_RPAREN = 26, // )
-    TOK_RPAREN = 26, // )
     TOK_LBRACE = 27, // {
     TOK_RBRACE = 28, // }
     TOK_LBRACKET = 29, // [
