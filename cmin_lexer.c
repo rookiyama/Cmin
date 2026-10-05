@@ -4,16 +4,6 @@
  * Input : <filename>.cmin
  * Output: <same filename>.txt
  *
- * The token numbers are intentionally fixed so that the sample
- * required by the proposal is produced:
- *   NUMBER     = 10
- *   IDENTIFIER = 11
- *   PLUS       = 21
- *   DIVIDE     = 24
- *   LPAREN     = 25
- *   RPAREN     = 26
- *   EOF        = -1
- *
  * Cmin characteristics implemented from the proposal:
  * - identifiers: [a-zA-Z_][a-zA-Z0-9_]*
  * - Cmin keywords/reserved words
@@ -25,91 +15,93 @@
  * - whitespace is ignored
  * - Cmin normally does not require semicolons; a semicolon is ignored
  *   by the lexer when encountered.
- */
+*/
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
+#include <stdio.h> // For FILE, fopen, fclose, fprintf, perror, snprintf
+#include <stdlib.h> // For EXIT_SUCCESS, EXIT_FAILURE
+#include <string.h> // For strcmp, strcpy, strcat, strrchr
+#include <ctype.h> // For isalpha, isdigit, isalnum
 
-#define MAX_LEXEME 1024
+#define MAX_LEXEME 1024 // Maximum length of a lexeme
 
-/* Token codes. The values 10, 11, 21, 24, 25 and 26 match the
-   example in the proposal/request. */
+// Assign token codes to each symbols.
 enum TokenType {
-    TOK_NUMBER = 10,
-    TOK_IDENTIFIER = 11,
+    TOK_NUMBER = 10, // Numeric literal
+    TOK_IDENTIFIER = 11, // Identifier (variable, function, etc.)
 
-    TOK_IF = 12,
-    TOK_ELSE = 13,
-    TOK_WHILE = 14,
-    TOK_CONTINUE = 15,
-    TOK_BREAK = 16,
-    TOK_RETURN = 17,
-    TOK_TRY = 18,
-    TOK_CATCH = 19,
+    TOK_IF = 12, // if
+    TOK_ELSE = 13, // else
+    TOK_WHILE = 14, // while
+    TOK_CONTINUE = 15, // continue
+    TOK_BREAK = 16, // break
+    TOK_RETURN = 17, // return
+    TOK_TRY = 18, // try
+    TOK_CATCH = 19, // catch
 
-    TOK_MINUS = 20,
-    TOK_PLUS = 21,
-    TOK_MULTIPLY = 22,
-    TOK_MODULO = 23,
-    TOK_DIVIDE = 24,
+    TOK_MINUS = 20, // -
+    TOK_PLUS = 21, // +
+    TOK_MULTIPLY = 22, // *
+    TOK_MODULO = 23, // %
+    TOK_DIVIDE = 24, // /
 
-    TOK_LPAREN = 25,
-    TOK_RPAREN = 26,
-    TOK_LBRACE = 27,
-    TOK_RBRACE = 28,
-    TOK_LBRACKET = 29,
-    TOK_RBRACKET = 30,
+    TOK_LPAREN = 25, // (
+    TOK_RPAREN = 26, // )
+    TOK_RPAREN = 26, // )
+    TOK_LBRACE = 27, // {
+    TOK_RBRACE = 28, // }
+    TOK_LBRACKET = 29, // [
+    TOK_RBRACKET = 30, // ]
 
-    TOK_ASSIGN = 31,
-    TOK_EQUAL = 32,
-    TOK_NOT_EQUAL = 33,
-    TOK_LESS = 34,
-    TOK_GREATER = 35,
-    TOK_LESS_EQUAL = 36,
-    TOK_GREATER_EQUAL = 37,
+    TOK_ASSIGN = 31, // =
+    TOK_EQUAL = 32, // ==
+    TOK_NOT_EQUAL = 33, // !=
+    TOK_LESS = 34, // <
+    TOK_GREATER = 35, // >
+    TOK_LESS_EQUAL = 36, // <=
+    TOK_GREATER_EQUAL = 37, // >=
 
-    TOK_INCREMENT = 38,
-    TOK_DECREMENT = 39,
-    TOK_EXPONENT = 40,
+    TOK_INCREMENT = 38, // ++
+    TOK_DECREMENT = 39, // --
+    TOK_EXPONENT = 40, // **
 
-    TOK_PLUS_EQUAL = 41,
-    TOK_MINUS_EQUAL = 42,
-    TOK_MULTIPLY_EQUAL = 43,
-    TOK_DIVIDE_EQUAL = 44,
-    TOK_MODULO_EQUAL = 45,
-    TOK_EXPONENT_EQUAL = 46,
+    TOK_PLUS_EQUAL = 41, // +=
+    TOK_MINUS_EQUAL = 42, // -=
+    TOK_MULTIPLY_EQUAL = 43, // *=
+    TOK_DIVIDE_EQUAL = 44, // /=
+    TOK_MODULO_EQUAL = 45, // %=
+    TOK_EXPONENT_EQUAL = 46, // **=
 
-    TOK_LEFT_SHIFT = 47,
-    TOK_RIGHT_SHIFT = 48,
-    TOK_LEFT_SHIFT_EQUAL = 49,
-    TOK_RIGHT_SHIFT_EQUAL = 50,
+    TOK_LEFT_SHIFT = 47, // <<
+    TOK_RIGHT_SHIFT = 48, // >>
+    TOK_LEFT_SHIFT_EQUAL = 49, // <<=
+    TOK_RIGHT_SHIFT_EQUAL = 50, // >>=
 
-    TOK_BIT_AND = 51,
-    TOK_BIT_OR = 52,
-    TOK_XOR = 53,
-    TOK_LOGICAL_AND = 54,
-    TOK_LOGICAL_OR = 55,
-    TOK_NOT = 56,
+    TOK_BIT_AND = 51, // &
+    TOK_BIT_OR = 52, // |
+    TOK_XOR = 53, // ^
+    TOK_LOGICAL_AND = 54, // &&
+    TOK_LOGICAL_OR = 55, // ||
+    TOK_NOT = 56, // !
 
-    TOK_COMMA = 57,
-    TOK_DOT = 58,
-    TOK_COLON = 59,
-    TOK_QUESTION = 60,
+    TOK_COMMA = 57, // ,
+    TOK_DOT = 58, // .
+    TOK_COLON = 59, // :
+    TOK_QUESTION = 60, // ?
 
-    TOK_STRING = 61,
-    TOK_CHAR = 62,
+    TOK_STRING = 61, // "
+    TOK_CHAR = 62, // '
 
-    TOK_ERROR = 99,
-    TOK_EOF = -1
+    TOK_ERROR = 99, // Error token
+    TOK_EOF = -1 // End of file token
 };
 
+// Define a structure to hold keywords and their corresponding token types.
 typedef struct {
     const char *word;
     int token;
 } Keyword;
 
+// Define the list of keywords and their corresponding token types.
 static const Keyword keywords[] = {
     {"if", TOK_IF},
     {"else", TOK_ELSE},
@@ -120,7 +112,7 @@ static const Keyword keywords[] = {
     {"try", TOK_TRY},
     {"catch", TOK_CATCH},
 
-    /* Cmin reserved words / data types / modifiers */
+    // Cmin reserved words / data types / modifiers
     {"int", TOK_IDENTIFIER},
     {"char", TOK_IDENTIFIER},
     {"string", TOK_IDENTIFIER},
@@ -139,43 +131,29 @@ static const Keyword keywords[] = {
     {"include", TOK_IDENTIFIER}
 };
 
+// Define the number of keywords.
 #define KEYWORD_COUNT (sizeof(keywords) / sizeof(keywords[0]))
 
-static int is_cmin_reserved(const char *lexeme) {
-    size_t i;
-
-    for (i = 0; i < KEYWORD_COUNT; ++i) {
-        if (strcmp(lexeme, keywords[i].word) == 0) {
-            return 1;
-        }
-    }
-    return 0;
-}
-
+// Function to check if a lexeme is a keyword and returns its token. 
 static int get_keyword_token(const char *lexeme) {
     size_t i;
 
     for (i = 0; i < KEYWORD_COUNT; ++i) {
         if (strcmp(lexeme, keywords[i].word) == 0) {
-            /* The proposal calls these words reserved, while the
-               executable keyword subset is represented by 12-19.
-               Type names/modifiers are still emitted as identifiers
-               here only if the project wants one generic identifier
-               class. Change this function if separate token classes
-               are required later. */
-            if (keywords[i].token != TOK_IDENTIFIER)
-                return keywords[i].token;
-            return TOK_IDENTIFIER;
+            // Returns the exact token defined in the keyword struct.
+            return keywords[i].token; 
         }
     }
 
-    return TOK_IDENTIFIER;
+    return 0; // Return 0 to indicate it's an identifier.
 }
 
+// Function to print the next token and its lexeme.
 static void print_token(FILE *out, int token, const char *lexeme) {
     fprintf(out, "Next token is: %d Next lexeme is %s\n", token, lexeme);
 }
 
+// Function to read a string or character literal.
 static int read_string_or_char(FILE *in, char *lexeme, int opening) {
     int c;
     int escaped = 0;
@@ -206,13 +184,14 @@ static int read_string_or_char(FILE *in, char *lexeme, int opening) {
     return TOK_ERROR;
 }
 
+// Function to get the next token from the input stream.
 static int get_next_token(FILE *in, char *lexeme, int *line) {
     int c, next;
     size_t i;
 
     lexeme[0] = '\0';
 
-    /* Skip whitespace and comments. */
+    // Skip whitespace and comments.
     while (1) {
         c = fgetc(in);
 
@@ -229,7 +208,7 @@ static int get_next_token(FILE *in, char *lexeme, int *line) {
         }
 
         if (c == ';') {
-            /* Cmin does not require semicolons. */
+            // Cmin does not require semicolons.
             continue;
         }
 
@@ -237,7 +216,7 @@ static int get_next_token(FILE *in, char *lexeme, int *line) {
             next = fgetc(in);
 
             if (next == '/') {
-                /* Inline comment. */
+                // Inline comment.
                 while ((c = fgetc(in)) != EOF && c != '\n')
                     ;
                 if (c == '\n')
@@ -246,7 +225,7 @@ static int get_next_token(FILE *in, char *lexeme, int *line) {
             }
 
             if (next == '*') {
-                /* Block comment. */
+                // Block comment.
                 int previous = 0;
                 int closed = 0;
 
@@ -278,8 +257,8 @@ static int get_next_token(FILE *in, char *lexeme, int *line) {
         break;
     }
 
-    /* Identifier / keyword:
-       [a-zA-Z_][a-zA-Z0-9_]* */
+    // Identifier / keyword:
+    // [a-zA-Z_][a-zA-Z0-9_]*
     if (isalpha((unsigned char)c) || c == '_') {
         i = 0;
 
@@ -295,13 +274,13 @@ static int get_next_token(FILE *in, char *lexeme, int *line) {
         if (c != EOF)
             ungetc(c, in);
 
-        if (is_cmin_reserved(lexeme)) {
-            int token = get_keyword_token(lexeme);
-
-            /* Keep Cmin data types/modifiers as reserved tokens.
-               This prevents them from being mistaken for user identifiers. */
+        int token = get_keyword_token(lexeme);
+        
+        if (token != 0) {
+            // Keep Cmin data types/modifiers as reserved tokens.
+            // This prevents them from being mistaken for user identifiers.
             if (token == TOK_IDENTIFIER) {
-                /* Assign a stable generic reserved-word token range. */
+                // Assign a stable generic reserved-word token range.
                 if (strcmp(lexeme, "int") == 0) return 70;
                 if (strcmp(lexeme, "char") == 0) return 71;
                 if (strcmp(lexeme, "string") == 0) return 72;
@@ -326,7 +305,7 @@ static int get_next_token(FILE *in, char *lexeme, int *line) {
         return TOK_IDENTIFIER;
     }
 
-    /* Numeric literals: integers and decimals. */
+    // Numeric literals: integers and decimals.
     if (isdigit((unsigned char)c)) {
         int has_dot = 0;
         i = 0;
@@ -353,11 +332,11 @@ static int get_next_token(FILE *in, char *lexeme, int *line) {
         return TOK_NUMBER;
     }
 
-    /* String / character literals. */
+    // String / character literals.
     if (c == '"' || c == '\'')
         return read_string_or_char(in, lexeme, c);
 
-    /* Multi-character operators. */
+    // Multi-character operators.
     switch (c) {
         case '+':
             next = fgetc(in);
@@ -513,11 +492,13 @@ static int get_next_token(FILE *in, char *lexeme, int *line) {
     }
 }
 
+// Function to check if a file has a .cmin extension
 static int has_cmin_extension(const char *filename) {
     const char *dot = strrchr(filename, '.');
     return dot != NULL && strcmp(dot, ".cmin") == 0;
 }
 
+// Function to create the output filename based on the input filename
 static void make_output_filename(const char *input, char *output, size_t size) {
     const char *dot = strrchr(input, '.');
 
@@ -534,6 +515,7 @@ static void make_output_filename(const char *input, char *output, size_t size) {
     }
 }
 
+// Main function
 int main(int argc, char *argv[]) {
     FILE *input;
     FILE *output;
