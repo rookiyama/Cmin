@@ -22,7 +22,8 @@
 #include <string.h> // For strcmp, strcpy, strcat, strrchr
 #include <ctype.h> // For isalpha, isdigit, isalnum
 
-#define MAX_LEXEME 1024 // Maximum length of a lexeme
+// Maximum length of a lexeme
+#define MAX_LEXEME 1024
 
 // Assign token codes to each symbols.
 enum TokenType {
