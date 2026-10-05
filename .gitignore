@@ -1,3 +1,7 @@
+# Ignore compiled executables (Windows and Mac/Linux)
 *.exe
-*.cmin
+*.out
+cmin_lexer
+
+# Ignore the generated Symbol Table output files
 *.txt
