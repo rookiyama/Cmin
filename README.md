@@ -39,7 +39,7 @@ To compile and run this lexical analyzer, you need a standard C compiler install
 Open your terminal and compile the C source file using your preferred compiler:
 
 ```bash
-gcc lexer.c -o cmin_lexer
+gcc cmin_lexer.c -o cmin_lexer
 
 ```
 
