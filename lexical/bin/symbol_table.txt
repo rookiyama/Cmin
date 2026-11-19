@@ -1,0 +1,13 @@
+Token Type     Lexeme         Token Value    
+
+IF             if             12             
+O_PAREN        (              58             
+INTER          $              70             
+IDENT          manuel         10             
+C_PAREN        )              59             
+O_SQRL         {              62             
+NEWLINE        \n             4              
+IDENT          torta          10             
+NEWLINE        \n             4              
+C_SQRL         }              63             
+EOF_           EOF            -1             
